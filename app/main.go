@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"regexp"
 	"slices"
 	"strconv"
@@ -33,32 +34,50 @@ func evaluateCommandLine(commandLine string) {
 
 	switch command {
 	case "exit":
-		if len(commandLineParts) == 1 {
-			// If no argument is provided, just exit
-			os.Exit(0)
-		}
-		errorCode, parsingError := strconv.ParseInt(commandLineParts[1], 10, 32)
-		if parsingError != nil {
-			os.Exit(0)
-		}
-		os.Exit(int(errorCode))
+		evaluateExit(commandLineParts)
 	case "echo":
-		fmt.Println(strings.Join(commandLineParts[1:], " "))
+		evaluateEcho(commandLineParts)
 	case "type":
-		if len(commandLineParts) < 2 {
-			fmt.Println()
-		}
-		commandsToType := commandLineParts[1:]
-		for _, cmd := range commandsToType {
-			if slices.Contains(builtinCommands, cmd) {
-				fmt.Printf("%s is a shell builtin\n", cmd)
-			} else {
-				fmt.Printf("%s: not found\n", cmd)
-			}
-		}
+		evaluateType(commandLineParts)
 	default:
-		fmt.Println(command + ": command not found")
+		evaluateNotFoundCommand(command)
 	}
+}
+
+func evaluateExit(commandLineParts []string) {
+	if len(commandLineParts) == 1 {
+		// If no argument is provided, just exit
+		os.Exit(0)
+	}
+	errorCode, parsingError := strconv.ParseInt(commandLineParts[1], 10, 32)
+	if parsingError != nil {
+		os.Exit(0)
+	}
+	os.Exit(int(errorCode))
+}
+
+func evaluateEcho(commandLineParts []string) {
+	fmt.Println(strings.Join(commandLineParts[1:], " "))
+}
+
+func evaluateType(commandLineParts []string) {
+	if len(commandLineParts) < 2 {
+		fmt.Println()
+	}
+	commandsToType := commandLineParts[1:]
+	for _, cmd := range commandsToType {
+		if slices.Contains(builtinCommands, cmd) {
+			fmt.Printf("%s is a shell builtin\n", cmd)
+		} else if path, err := exec.LookPath(cmd); err == nil {
+			fmt.Printf("%s is %s\n", cmd, path)
+		} else {
+			fmt.Printf("%s: not found\n", cmd)
+		}
+	}
+}
+
+func evaluateNotFoundCommand(command string) {
+	fmt.Printf("%s: command not found\n", command)
 }
 
 var builtinCommands = []string{
