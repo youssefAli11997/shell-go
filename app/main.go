@@ -40,7 +40,7 @@ func evaluateCommandLine(commandLine string) {
 	case "type":
 		evaluateType(commandLineParts)
 	default:
-		evaluateNotFoundCommand(command)
+		evaluateExternalCommand(commandLineParts)
 	}
 }
 
@@ -74,6 +74,23 @@ func evaluateType(commandLineParts []string) {
 			fmt.Printf("%s: not found\n", cmd)
 		}
 	}
+}
+
+func evaluateExternalCommand(commandLineParts []string) {
+	command := commandLineParts[0]
+	arguments := commandLineParts[1:]
+	_, err := exec.LookPath(command)
+	if err != nil {
+		evaluateNotFoundCommand(command)
+		return
+	}
+
+	cmd := exec.Command(command, arguments...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	cmd.Run()
 }
 
 func evaluateNotFoundCommand(command string) {
