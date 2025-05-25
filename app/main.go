@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -26,7 +28,7 @@ func main() {
 }
 
 func evaluateCommandLine(commandLine string) {
-	commandLineParts := strings.Split(commandLine, " ")
+	commandLineParts := whiteSpaceRegex.Split(commandLine, -1)
 	command := commandLineParts[0]
 
 	switch command {
@@ -42,7 +44,27 @@ func evaluateCommandLine(commandLine string) {
 		os.Exit(int(errorCode))
 	case "echo":
 		fmt.Println(strings.Join(commandLineParts[1:], " "))
+	case "type":
+		if len(commandLineParts) < 2 {
+			fmt.Println()
+		}
+		commandsToType := commandLineParts[1:]
+		for _, cmd := range commandsToType {
+			if slices.Contains(builtinCommands, cmd) {
+				fmt.Printf("%s is a shell builtin\n", cmd)
+			} else {
+				fmt.Printf("%s: not found\n", cmd)
+			}
+		}
 	default:
 		fmt.Println(command + ": command not found")
 	}
 }
+
+var builtinCommands = []string{
+	"exit",
+	"echo",
+	"type",
+}
+
+var whiteSpaceRegex = regexp.MustCompile(`\s+`)
