@@ -39,6 +39,8 @@ func evaluateCommandLine(commandLine string) {
 		evaluateEcho(commandLineParts)
 	case "type":
 		evaluateType(commandLineParts)
+	case "pwd":
+		evaluatePwd()
 	default:
 		evaluateExternalCommand(commandLineParts)
 	}
@@ -76,6 +78,15 @@ func evaluateType(commandLineParts []string) {
 	}
 }
 
+func evaluatePwd() {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error getting current directory:", err)
+		return
+	}
+	fmt.Println(currentDir)
+}
+
 func evaluateExternalCommand(commandLineParts []string) {
 	command := commandLineParts[0]
 	arguments := commandLineParts[1:]
@@ -101,6 +112,7 @@ var builtinCommands = []string{
 	"exit",
 	"echo",
 	"type",
+	"pwd",
 }
 
 var whiteSpaceRegex = regexp.MustCompile(`\s+`)
