@@ -13,7 +13,13 @@ import (
 
 func main() {
 	for {
-		fmt.Fprint(os.Stdout, "$ ")
+		// currentDir, err := os.Getwd()
+		// if err != nil {
+		// 	fmt.Fprintln(os.Stderr, "Error getting current directory:", err)
+		// 	os.Exit(1)
+		// }
+		// fmt.Fprintf(os.Stdout, "(%s) $ ", currentDir)
+		fmt.Fprintf(os.Stdout, "$ ")
 
 		// Wait for user input
 		command, err := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -41,6 +47,8 @@ func evaluateCommandLine(commandLine string) {
 		evaluateType(commandLineParts)
 	case "pwd":
 		evaluatePwd()
+	case "cd":
+		evaluateCD(commandLineParts)
 	default:
 		evaluateExternalCommand(commandLineParts)
 	}
@@ -85,6 +93,32 @@ func evaluatePwd() {
 		return
 	}
 	fmt.Println(currentDir)
+}
+
+func evaluateCD(commandLineParts []string) {
+	var targetDir string
+	var err error
+	if len(commandLineParts) < 2 || commandLineParts[1] == "" {
+		targetDir, err = os.UserHomeDir()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "cd: cannot find home directory")
+			return
+		}
+	} else {
+		targetDir = commandLineParts[1]
+		if strings.HasPrefix(targetDir, "~") {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "cd: cannot find home directory")
+				return
+			}
+			targetDir = strings.Replace(targetDir, "~", homeDir, 1)
+		}
+	}
+	err = os.Chdir(targetDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cd: %s: No such file or directory\n", targetDir)
+	}
 }
 
 func evaluateExternalCommand(commandLineParts []string) {
