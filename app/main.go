@@ -140,8 +140,8 @@ func evaluateNotFoundCommand(command string) {
 
 func extractCommandAndArguments(commandLine string) (string, []string) {
 	commandLine = strings.TrimSpace(commandLine)
-	var re = regexp.MustCompile(`'(\w+)'|"(\w+)"`)
-	commandLine = re.ReplaceAllString(commandLine, `$1`)
+	commandLine = singleQuotesRegex.ReplaceAllString(commandLine, `$1`)
+	commandLine = doubleQuotesRegex.ReplaceAllString(commandLine, `$1`)
 	if commandLine == "" {
 		return "", nil
 	}
@@ -160,6 +160,8 @@ func extractCommandAndArguments(commandLine string) (string, []string) {
 
 // Regex to match all arguments (quoted or unquoted) as a list of strings
 var argRegex = regexp.MustCompile(`'[^']*'|"[^"]*"|\S+`)
+var singleQuotesRegex = regexp.MustCompile(`'(\w+)'`)
+var doubleQuotesRegex = regexp.MustCompile(`"(\w+)"`)
 
 var builtinCommands = []string{
 	"exit",
