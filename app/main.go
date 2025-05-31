@@ -35,47 +35,45 @@ func main() {
 }
 
 func evaluateCommandLine(commandLine string) {
-	commandLineParts := whiteSpaceRegex.Split(commandLine, -1)
-	command := commandLineParts[0]
+	command, arguments := extractCommandAndArguments(commandLine)
 
 	switch command {
 	case "exit":
-		evaluateExit(commandLineParts)
+		evaluateExit(arguments)
 	case "echo":
-		evaluateEcho(commandLineParts)
+		evaluateEcho(arguments)
 	case "type":
-		evaluateType(commandLineParts)
+		evaluateType(arguments)
 	case "pwd":
 		evaluatePwd()
 	case "cd":
-		evaluateCD(commandLineParts)
+		evaluateCD(arguments)
 	default:
-		evaluateExternalCommand(commandLineParts)
+		evaluateExternalCommand(command, arguments)
 	}
 }
 
-func evaluateExit(commandLineParts []string) {
-	if len(commandLineParts) == 1 {
+func evaluateExit(arguments []string) {
+	if len(arguments) == 0 {
 		// If no argument is provided, just exit
 		os.Exit(0)
 	}
-	errorCode, parsingError := strconv.ParseInt(commandLineParts[1], 10, 32)
+	errorCode, parsingError := strconv.ParseInt(arguments[0], 10, 32)
 	if parsingError != nil {
 		os.Exit(0)
 	}
 	os.Exit(int(errorCode))
 }
 
-func evaluateEcho(commandLineParts []string) {
-	fmt.Println(strings.Join(commandLineParts[1:], " "))
+func evaluateEcho(arguments []string) {
+	fmt.Println(strings.Join(arguments, " "))
 }
 
-func evaluateType(commandLineParts []string) {
-	if len(commandLineParts) < 2 {
+func evaluateType(arguments []string) {
+	if len(arguments) == 0 {
 		fmt.Println()
 	}
-	commandsToType := commandLineParts[1:]
-	for _, cmd := range commandsToType {
+	for _, cmd := range arguments {
 		if slices.Contains(builtinCommands, cmd) {
 			fmt.Printf("%s is a shell builtin\n", cmd)
 		} else if path, err := exec.LookPath(cmd); err == nil {
@@ -95,17 +93,17 @@ func evaluatePwd() {
 	fmt.Println(currentDir)
 }
 
-func evaluateCD(commandLineParts []string) {
+func evaluateCD(arguments []string) {
 	var targetDir string
 	var err error
-	if len(commandLineParts) < 2 || commandLineParts[1] == "" {
+	if len(arguments) == 0 || arguments[0] == "" {
 		targetDir, err = os.UserHomeDir()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "cd: cannot find home directory")
 			return
 		}
 	} else {
-		targetDir = commandLineParts[1]
+		targetDir = arguments[0]
 		if strings.HasPrefix(targetDir, "~") {
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
@@ -121,9 +119,7 @@ func evaluateCD(commandLineParts []string) {
 	}
 }
 
-func evaluateExternalCommand(commandLineParts []string) {
-	command := commandLineParts[0]
-	arguments := commandLineParts[1:]
+func evaluateExternalCommand(command string, arguments []string) {
 	_, err := exec.LookPath(command)
 	if err != nil {
 		evaluateNotFoundCommand(command)
@@ -142,11 +138,32 @@ func evaluateNotFoundCommand(command string) {
 	fmt.Printf("%s: command not found\n", command)
 }
 
+func extractCommandAndArguments(commandLine string) (string, []string) {
+	commandLine = strings.TrimSpace(commandLine)
+	var re = regexp.MustCompile(`'(\w+)'|"(\w+)"`)
+	commandLine = re.ReplaceAllString(commandLine, `$1`)
+	if commandLine == "" {
+		return "", nil
+	}
+	matches := argRegex.FindAllString(commandLine, -1)
+	if len(matches) == 0 {
+		return "", nil
+	}
+
+	// Remove quotes from arguments
+	for i, match := range matches {
+		matches[i] = strings.Trim(match, `"'`)
+	}
+
+	return matches[0], matches[1:]
+}
+
+// Regex to match all arguments (quoted or unquoted) as a list of strings
+var argRegex = regexp.MustCompile(`'[^']*'|"[^"]*"|\S+`)
+
 var builtinCommands = []string{
 	"exit",
 	"echo",
 	"type",
 	"pwd",
 }
-
-var whiteSpaceRegex = regexp.MustCompile(`\s+`)
